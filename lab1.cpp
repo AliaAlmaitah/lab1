@@ -1,5 +1,5 @@
-//modified by:
-//date:
+//modified by: Alia Al-Maitah
+//date:09/05/2023
 //
 //author: Gordon Griesel
 //date: Spring 2022
@@ -23,6 +23,9 @@ using namespace std;
 class Global {
 public:
 	int xres, yres;
+    float w;
+    float dir;
+    float pos [2];
 	Global();
 } g;
 
@@ -79,6 +82,10 @@ Global::Global()
 {
 	xres = 400;
 	yres = 200;
+    w = 30.0f;
+    dir = 200.0f;
+    pos[0] = 0.0f + w;
+    pos[1] = yres/2.0f;
 }
 
 X11_wrapper::~X11_wrapper()
@@ -206,6 +213,16 @@ void X11_wrapper::check_mouse(XEvent *e)
 
 		}
 	}
+
+
+
+    if (e->type != ConfigureNotify)
+        return;
+    XConfigureEvent xce = e->xconfigure;
+    if (xce.width != g.xres || xce.height != g.yres) {
+        g.xres = xce.width; // Update the window width
+        reshape_window(xce.width, xce.height);
+    }
 }
 
 int X11_wrapper::check_keys(XEvent *e)
@@ -241,40 +258,43 @@ void init_opengl(void)
 
 void physics()
 {
-
-}
-
-void render()
-{
-	static float w = 20.0f;
-	static float dir = 25.0f;
-	static float pos[2] = {0.0f+w, g.yres/2.0f};
-	//
-	glClear(GL_COLOR_BUFFER_BIT);
-	//Draw box.
-	glPushMatrix();
-	glColor3ub(150, 160, 220);
-	glTranslatef(pos[0], pos[1], 0.0f);
-	glBegin(GL_QUADS);
-		glVertex2f(-w, -w);
-		glVertex2f(-w,  w);
-		glVertex2f( w,  w);
-		glVertex2f( w, -w);
-	glEnd();
-	glPopMatrix();
-	pos[0] += dir;
-	if (pos[0] >= (g.xres-w)) {
-		pos[0] = (g.xres-w);
-		dir = -dir;
-	}
-	if (pos[0] <= w) {
-		pos[0] = w;
-		dir = -dir;
-	}
+    g.pos[0] += g.dir;
+    if (g.pos[0]>= (g.xres-g.w)){
+            g.pos[0] = (g.xres -g.w);
+            g.dir = -g.dir;
+    }
+    if (g.pos[0]<= g.w){
+        g.pos[0] = g.w;
+        g.dir = -g.dir;
+    }
 }
 
 
+void render() {
+    glClear(GL_COLOR_BUFFER_BIT);
+    glPushMatrix();
+    glTranslatef(g.pos[0], g.pos[1], 0.0f);
+
+    // Calculate the bouncing rate as a value between 0 and 1
+    float bouncingRate = fabs(g.dir / (g.xres - g.w * 2));
+    // Map the bouncingRate to the red component of the color
+    float redComponent = min(1.0f, 0.5f + bouncingRate * 5.0f);
+    float blueComponent = min(1.0f, 1.0f - bouncingRate * 5.0f);
 
 
 
+    glColor3f(redComponent, 0.0f, blueComponent);
+
+    glBegin(GL_QUADS);
+    glVertex2f(-g.w, -g.w);
+    glVertex2f(-g.w, g.w);
+    glVertex2f(g.w, g.w);
+    glVertex2f(g.w, -g.w);
+    glEnd();
+    glPopMatrix();
+
+    if (g.xres - g.w * 2 <= 0) {
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
+}
 
